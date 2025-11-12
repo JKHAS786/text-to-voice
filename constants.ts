@@ -1,4 +1,3 @@
-
 import { VoiceOption, PitchOption, StyleOption } from './types';
 
 export const VOICES: VoiceOption[] = [
@@ -7,6 +6,11 @@ export const VOICES: VoiceOption[] = [
   { id: 'Charon', name: 'Charon (Male, Deep)' },
   { id: 'Fenrir', name: 'Fenrir (Male, Deep)' },
   { id: 'Zephyr', name: 'Zephyr (Female)' },
+  { id: 'Umbriel', name: 'Umbriel (Female)' },
+  { id: 'Vindemiatrix', name: 'Vindemiatrix (Female, Warm)' },
+  { id: 'Zubenelgenubi', name: 'Zubenelgenubi (Male)' },
+  { id: 'Rasalgethi', name: 'Rasalgethi (Male, Crisp)' },
+  { id: 'Schedar', name: 'Schedar (Male, Deep)' },
 ];
 
 export const PITCHES: PitchOption[] = [
@@ -18,7 +22,10 @@ export const PITCHES: PitchOption[] = [
 export const STYLES: StyleOption[] = [
     { id: 'normal', name: 'Normal', instruction: '' },
     { id: 'cheerful', name: 'Cheerful', instruction: 'Say cheerfully: ' },
+    { id: 'excited', name: 'Excited', instruction: 'Say with excitement: ' },
     { id: 'sad', name: 'Sad', instruction: 'Say sadly: ' },
     { id: 'angry', name: 'Angry', instruction: 'Say angrily: ' },
+    { id: 'calm', name: 'Calm', instruction: 'Say calmly: ' },
     { id: 'whisper', name: 'Whisper', instruction: 'Say in a whisper: ' },
+    { id: 'shouting', name: 'Shouting', instruction: 'Say as if shouting: ' },
 ];

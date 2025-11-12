@@ -1,8 +1,14 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { VOICES, PITCHES, STYLES } from './constants';
 import { decode, createWavBlob } from './utils/audioUtils';
-import { GenerateIcon, LoadingSpinner, PlayIcon } from './components/Icon';
+import { GenerateIcon, LoadingSpinner, PlayIcon, TrashIcon } from './components/Icon';
 import { generateSpeech } from './services/geminiService';
+
+interface PronunciationRule {
+    id: number;
+    word: string;
+    pronunciation: string;
+}
 
 const App: React.FC = () => {
     const [text, setText] = useState<string>("Hello! Welcome to the advanced text-to-voice generator. You can change my voice, pitch, and style using the options below.");
@@ -13,6 +19,11 @@ const App: React.FC = () => {
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [previewLoading, setPreviewLoading] = useState<Record<string, boolean>>({});
+    
+    const [pronunciationRules, setPronunciationRules] = useState<PronunciationRule[]>([
+        { id: 1, word: 'GIF', pronunciation: 'JIF' }
+    ]);
+    const [nextId, setNextId] = useState(2);
 
     useEffect(() => {
         const currentAudioUrl = audioUrl;
@@ -22,6 +33,33 @@ const App: React.FC = () => {
             }
         };
     }, [audioUrl]);
+
+    const handleAddRule = () => {
+        setPronunciationRules([...pronunciationRules, { id: nextId, word: '', pronunciation: '' }]);
+        setNextId(nextId + 1);
+    };
+
+    const handleRemoveRule = (idToRemove: number) => {
+        setPronunciationRules(rules => rules.filter(rule => rule.id !== idToRemove));
+    };
+
+    const handleRuleChange = (id: number, field: 'word' | 'pronunciation', value: string) => {
+        setPronunciationRules(rules =>
+            rules.map(rule => (rule.id === id ? { ...rule, [field]: value } : rule))
+        );
+    };
+    
+    const applyPronunciationRules = useCallback((inputText: string): string => {
+        let processedText = inputText;
+        for (const rule of pronunciationRules) {
+            if (rule.word.trim() !== '') {
+                // Escape special characters for regex and use 'g' flag for global replacement
+                const escapedWord = rule.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                processedText = processedText.replace(new RegExp(escapedWord, 'g'), rule.pronunciation);
+            }
+        }
+        return processedText;
+    }, [pronunciationRules]);
 
     const handlePreview = useCallback(async (voiceId: string, voiceName: string) => {
         setPreviewLoading(prev => ({ ...prev, [voiceId]: true }));
@@ -59,7 +97,8 @@ const App: React.FC = () => {
         setAudioUrl(null);
 
         try {
-            const base64Audio = await generateSpeech(text, selectedVoice, selectedPitch, selectedStyle);
+            const processedText = applyPronunciationRules(text);
+            const base64Audio = await generateSpeech(processedText, selectedVoice, selectedPitch, selectedStyle);
             
             const pcmData = decode(base64Audio);
             const wavBlob = createWavBlob(pcmData);
@@ -72,7 +111,7 @@ const App: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [text, selectedVoice, selectedPitch, selectedStyle]);
+    }, [text, selectedVoice, selectedPitch, selectedStyle, applyPronunciationRules]);
 
     return (
         <div className="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4 font-sans">
@@ -95,6 +134,49 @@ const App: React.FC = () => {
                             className="w-full h-40 p-4 bg-gray-700 border-2 border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-300 resize-none text-gray-200"
                             aria-label="Text input for speech generation"
                         />
+                    </div>
+                    
+                    <div className="space-y-3">
+                        <label className="font-semibold text-gray-300">Pronunciation Guide <span className="text-gray-400 font-normal">(Optional)</span></label>
+                        <div className="space-y-3 p-4 bg-gray-900/50 border border-gray-600 rounded-lg">
+                            <p className="text-sm text-gray-400 -mt-1 mb-3">Replace words with specific pronunciations before generating audio.</p>
+                            <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                                {pronunciationRules.map((rule, index) => (
+                                    <div key={rule.id} className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Word to replace"
+                                            value={rule.word}
+                                            onChange={(e) => handleRuleChange(rule.id, 'word', e.target.value)}
+                                            className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-2 focus:ring-cyan-500 text-white"
+                                            aria-label={`Word to replace for rule ${index + 1}`}
+                                        />
+                                        <span className="text-gray-400 font-bold">&rarr;</span>
+                                        <input
+                                            type="text"
+                                            placeholder="Pronunciation"
+                                            value={rule.pronunciation}
+                                            onChange={(e) => handleRuleChange(rule.id, 'pronunciation', e.target.value)}
+                                            className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-2 focus:ring-cyan-500 text-white"
+                                            aria-label={`Pronunciation for rule ${index + 1}`}
+                                        />
+                                        <button
+                                            onClick={() => handleRemoveRule(rule.id)}
+                                            className="p-2 text-gray-400 hover:text-red-400 transition-colors rounded-full"
+                                            aria-label={`Remove rule ${index + 1}`}
+                                        >
+                                            <TrashIcon className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                            <button
+                                onClick={handleAddRule}
+                                className="text-sm font-semibold text-cyan-400 hover:text-cyan-300 transition-colors mt-2"
+                            >
+                                + Add Rule
+                            </button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
